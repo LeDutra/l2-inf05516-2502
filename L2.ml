@@ -1,7 +1,13 @@
+(*****************************************************)
+(*                   LINGUAGEM L2                    *)
+(*  Trabalho de Semântica Formal - INF05516 (25/2)   *)
+(*                  Leonardo Dutra                   *)
+(*                   Luana Hahn                      *)
+(*****************************************************)
 
-(* ========================================================================== *)
-(*                        DEFINIÇÕES DA LINGUAGEM L2                          *)
-(* ========================================================================== *)
+(*****************************************************)
+(*                    DEFINIÇÕES                     *)
+(*****************************************************)
 
 (* Tipos de Operadores Binários *)
 type bop = 
@@ -32,12 +38,12 @@ type expr =
   | Unit                                (* Valor Unitário: () *)
   | Loc of int                          (* Alocações de memória (apenas em tempo de execução) *)
 
-(* ========================================================================== *)
-(*                           INFERÊNCIA DE TIPOS                              *)
-(* ========================================================================== *)
+(*****************************************************)
+(*              INFERÊNCIA DE TIPOS                  *)
+(*****************************************************)
 
-exception TypeError of string (* Exceção para erros de tipo encontrados *)
-type tyenv = (string * tipo) list (* Γ Ambiente de tipos *)
+(* Exceção para erros de tipo encontrados *)
+exception TypeError of string
 
 (* Função auxiliar para converter tipos em string (para mensagens de erro) *)
 let rec type_to_string t = 
@@ -46,15 +52,18 @@ let rec type_to_string t =
   | TyBool -> "bool"
   | TyRef t -> "ref " ^ type_to_string t
   | TyUnit -> "unit"
-  | _ -> raise (TypeError "Tipo desconhecido na conversão para string") (* Essa função já cobre todas as possibilidades, mas por segurança checamos se é válida*)
+  | _ -> raise (TypeError "Tipo desconhecido na conversão para string")
 
-(* Busca o tipo de uma variável no contexto (Lookup) *)
+(* Ambiente de tipos (Γ) *)
+type tyenv = (string * tipo) list 
+
+(* Busca o tipo de uma variável no ambiente *)
 let rec lookup (env : tyenv) (x : string) : tipo = 
   match env with 
   | [] -> raise (TypeError ("Variável não declarada: " ^ x))
   | (y, t) :: rest -> if x = y then t else lookup rest x
 
-(* Função Principal de Inferência: verifica as regras Γ ⊢ e : T *)
+(* Função principal de inferência de tipos (Γ ⊢ e : T) *)
 let rec typeinfer (env : tyenv) (e : expr) : tipo = 
   match e with
 
@@ -95,7 +104,7 @@ let rec typeinfer (env : tyenv) (e : expr) : tipo =
       else raise (TypeError "Condição do if deve ser booleana")
 
   (* T-VAR *)
-  | Id x -> lookup env x (* x : T (se x está no contexto) *)
+  | Id x -> lookup env x (* Busca o tipo de x - se x está no contexto do ambiente de tipos *)
 
   (* T-LET *)
   | Let (x, t_decl, e1, e2) ->
@@ -139,9 +148,9 @@ let rec typeinfer (env : tyenv) (e : expr) : tipo =
 
   | Loc _ -> raise (TypeError "Alocações de memória não devem aparecer no código fonte")
 
-(* ========================================================================== *)
-(*                        AVALIADOR SMALL-STEP                                *)
-(* ========================================================================== *)
+(*****************************************************)
+(*              AVALIADOR (SMALL-STEP)               *)
+(*****************************************************)
 
 (* Memória *)
 (* Representação da memória como uma lista de pares (local, valor) *)
@@ -242,7 +251,7 @@ let rec step (s : tymem) (e : expr) : (expr * tymem) option =
 
   (* Regras DEREF e DEREF1 *)
   | Deref (Loc l) ->
-      Some (lookup_tymem s l, s) (* Lê valor da memória *)
+      Some (lookup_tymem s  l, s) (* Lê valor da memória *)
   | Deref e1 ->
       (match step s e1 with
        | Some (e1', s') -> Some (Deref e1', s')
@@ -280,9 +289,9 @@ let rec eval (s : tymem) (e : expr) : expr * tymem =
   | Some (e', s') -> eval s' e'
   | None -> (e, s)
 
-(* ========================================================================== *)
-(*                           TESTES E UTILITÁRIOS                             *)
-(* ========================================================================== *)
+(*****************************************************)
+(*                      TESTES                       *)
+(*****************************************************)
 
 (* Converte expressão para string para impressão *)
 let rec expr_to_string e = 
@@ -295,39 +304,37 @@ let rec expr_to_string e =
   | Binop _ -> "operacao"
   | _ -> "expr_complexa"
 
-(* Teste: Fatorial de 5 (Imperativo) *)
-(* 
-   let x : int = 5 in
-   let z : ref int = new x in  (z é um ponteiro para o contador)
-   let y : ref int = new 1 in  (y é um ponteiro para o acumulador)
-   while (!z > 0) do (
-       y := !y * !z;
-       z := !z - 1
-   );
-   !y
+(* TESTE - fatorial
+  let  x:     int = 5     in 
+  let  z: ref int = new x in 
+  let  y: ref int = new 1 in 
+  (while (!z > 0) (
+         y :=  !y * !z;
+         z :=  !z - 1);
+  !y)     
 *)
 
-let test_factorial = 
-  let body_loop = Seq(
-      Asg(Id "y", Binop(Mul, Deref(Id "y"), Deref(Id "z"))),
-      Asg(Id "z", Binop(Sub, Deref(Id "z"), Num 1))
+let teste_factorial = 
+  let body_loop = Seq(                                              (* body_loop: *)
+      Asg(Id "y", Binop(Mul, Deref(Id "y"), Deref(Id "z"))),        (* y := !y * !z *)
+      Asg(Id "z", Binop(Sub, Deref(Id "z"), Num 1))                 (* z := !z - 1 *)
   ) in
-  Let("x", TyInt, Num 5, 
-      Let("z", TyRef TyInt, New (Id "x"), 
-          Let("y", TyRef TyInt, New (Num 1),
-              Seq(Wh(Binop(Gt, Deref(Id "z"), Num 0), body_loop),
-                  Deref (Id "y")))))
-
+  Let("x", TyInt, Num 5,                                            (* let x:     int = 5     in *)
+      Let("z", TyRef TyInt, New (Id "x"),                           (* let z: ref int = new x in *)
+          Let("y", TyRef TyInt, New (Num 1),                        (* let y: ref int = new 1 in *)
+              Seq(Wh(Binop(Gt, Deref(Id "z"), Num 0), body_loop),   (* while (!z > 0) do body_loop; *)
+                  Deref (Id "y")))))                                (* !y *)
+                  
 let () =
-  print_endline "=== Interpretador L2 ===";
+  print_endline "*** Interpretador L2 ***";
   try
-    print_string "1. Verificando Tipos (Inferência)... ";
-    let t = typeinfer [] test_factorial in
+    print_string "1. Verificação de tipos (Inferência)... ";
+    let t = typeinfer [] teste_factorial in
     print_endline ("Sucesso! Tipo inferido: " ^ type_to_string t);
     
     print_string "2. Executando programa (Avaliação)... ";
-    let (res, _) = eval [] test_factorial in
+    let (res, _) = eval [] teste_factorial in
     print_endline ("Resultado Final: " ^ expr_to_string res)
   with 
-  | TypeError msg -> print_endline ("\nERRO DE TIPO: " ^ msg)
-  | Failure msg -> print_endline ("\nERRO DE EXECUÇÃO: " ^ msg)
+  | TypeError msg -> print_endline ("\nFalha! Erro de tipo: " ^ msg)
+  | Failure msg -> print_endline ("\nErro na execução: " ^ msg)
