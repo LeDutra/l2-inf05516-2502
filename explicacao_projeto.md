@@ -101,6 +101,3 @@ while (*z > 0) {
 }
 return *y;
 ```
-
----
-**Dica para Apresentação:** Mostre que o interpretador primeiro valida os tipos (garantindo segurança) e depois executa passo-a-passo manipulando a lista `store` como se fosse a RAM do computador.

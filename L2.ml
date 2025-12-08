@@ -194,12 +194,12 @@ let rec subst x v e =
   | Deref e1 -> Deref (subst x v e1)
   | Seq (e1, e2) -> Seq (subst x v e1, subst x v e2)
 
-(* Um Passo da Execução (Small-Step): Transforma (e, s) em (e', s') *)
+(* Passo de execução (small step): transforma (e, s) em (e', s') *)
 let rec step (s : tymem) (e : expr) : (expr * tymem) option =
   match e with
   | Num _ | Bool _ | Unit | Loc _ -> None                       (* Valores já estão prontos, não precisa dar passo *)
   
-  (* Regras OP1 e OP2: Reduz operandos binários *)
+  (* Regras OP1 e OP2: reduz operandos binários *)
   | Binop (op, e1, e2) when is_value e1 && is_value e2 ->
       (match op, e1, e2 with
        | Sum, Num n1, Num n2 -> Some (Num (n1 + n2), s)  
@@ -283,7 +283,7 @@ let rec step (s : tymem) (e : expr) : (expr * tymem) option =
   | Id _ -> None (* Variável livre? Erro de execução ou variável não substituída *)
 
 
-(* Loop de Avaliação: roda 'step' até terminar *)
+(* Loop de avaliação: roda 'step' até terminar *)
 let rec eval (s : tymem) (e : expr) : expr * tymem =
   match step s e with
   | Some (e', s') -> eval s' e'
@@ -293,7 +293,7 @@ let rec eval (s : tymem) (e : expr) : expr * tymem =
 (*                      TESTES                       *)
 (*****************************************************)
 
-(* Converte expressão para string para impressão *)
+(* Converte expressão para string pra impressão *)
 let rec expr_to_string e = 
   match e with
   | Num n -> string_of_int n
@@ -304,14 +304,36 @@ let rec expr_to_string e =
   | Binop _ -> "operacao"
   | _ -> "expr_complexa"
 
-(* TESTE - fatorial
-  let  x:     int = 5     in 
-  let  z: ref int = new x in 
-  let  y: ref int = new 1 in 
-  (while (!z > 0) (
-         y :=  !y * !z;
-         z :=  !z - 1);
-  !y)     
+(*
+
+TESTE - fatorial:
+
+let  x:     int = 5     in 
+let  z: ref int = new x in 
+let  y: ref int = new 1 in 
+(while (!z > 0) (
+       y :=  !y * !z;
+       z :=  !z - 1);
+!y)     
+
+let cndwhi = Binop(Gt, Deref (Id "z"),Num 0)
+let asgny = Asg(Id "y", Binop(Mul, Deref (Id "y"),Deref(Id "z")))
+let asgnz = Asg(Id "z", Binop(Sub, Deref (Id "z"),Num 1))
+let bdwhi = Seq(asgny, asgnz) 
+let whi = Wh(cndwhi, bdwhi)
+let prt = Deref (Id "y")
+let seq = Seq(whi, prt)
+
+Que pode ser representado como:
+
+Seq(
+  Wh(
+    Binop(Gt, Deref (Id "z"),Num 0),
+    Seq(
+      Asg(Id "y", Binop(Mul, Deref (Id "y"),Deref(Id "z"))),
+      Asg(Id "z", Binop(Sub, Deref (Id "z"),Num 1)))),
+  Deref (Id "y"))
+
 *)
 
 let teste_factorial = 
