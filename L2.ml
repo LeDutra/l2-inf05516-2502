@@ -11,9 +11,9 @@
 
 (* Tipos de Operadores Binários *)
 type bop = 
-  | Sum | Sub | Mul | Div               (* Aritméticos: +, -, *, / *)
-  | Eq  | Neq | Lt  | Gt                (* Relacionais: =, <>, <, > *)
-  | And | Or                            (* Lógicos: &&, || *)
+  | Sum | Sub | Mul | Div               (* Op. Aritméticas: +, -, *, / *)
+  | Eq  | Neq | Lt  | Gt                (* Op. Relacionais: =, <>, <, > *)
+  | And | Or                            (* Op. Lógicas: &&, || *)
 
 (* Tipos da Linguagem *)
 type tipo = 
@@ -24,9 +24,9 @@ type tipo =
     
 (* Árvore de Sintaxe Abstrata (AST) *)
 type expr = 
-  | Num of int                          (* Números inteiros: 1, 42 *)
-  | Bool of bool                        (* Booleanos: true, false *)
-  | Id of string                        (* Variáveis (Identifiers): x, y *)
+  | Num of int                          (* Números inteiros do tipo int *)
+  | Bool of bool                        (* Booleanos do tipo bool *)
+  | Id of string                        (* Variáveis: x, y *)
   | Binop of bop * expr * expr          (* Operação Binária: e1 op e2 *)
   | If of expr * expr * expr            (* Condicional: if e1 then e2 else e3 *)
   | Let of string * tipo * expr * expr  (* Declaração: let x:T = e1 in e2 *)
@@ -45,7 +45,7 @@ type expr =
 (* Exceção para erros de tipo encontrados *)
 exception TypeError of string
 
-(* Função auxiliar para converter tipos em string (para mensagens de erro) *)
+(* Função auxiliar para converter tipos em string (para mostrar mensagens de erro) *)
 let rec type_to_string t = 
   match t with
   | TyInt -> "int"
@@ -57,7 +57,7 @@ let rec type_to_string t =
 (* Ambiente de tipos (Γ) *)
 type tyenv = (string * tipo) list 
 
-(* Busca o tipo de uma variável no ambiente *)
+(* Função que busca o tipo de uma variável no ambiente *)
 let rec lookup (env : tyenv) (x : string) : tipo = 
   match env with 
   | [] -> raise (TypeError ("Variável não declarada: " ^ x))
